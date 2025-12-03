@@ -1,0 +1,27 @@
+{
+  "name": "typescriptblogaggregator",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "This is the [Build a Blog Aggregator in TypeScript project](https://www.boot.dev/lessons/4d624835-9830-4ca6-bfbb-280112f64baf) from [Boot.dev](https://www.boot.dev).",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "tsx ./src/index.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mmert9008/typescriptBlogAggregator.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mmert9008/typescriptBlogAggregator/issues"
+  },
+  "homepage": "https://github.com/mmert9008/typescriptBlogAggregator#readme",
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}
