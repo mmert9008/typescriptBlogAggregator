@@ -6,7 +6,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "tsx ./src/index.ts"
+    "start": "tsx ./src/index.ts",
+    "generate": "drizzle-kit generate",
+    "migrate": "drizzle-kit migrate"
   },
   "repository": {
     "type": "git",
@@ -21,7 +23,12 @@
   "homepage": "https://github.com/mmert9008/typescriptBlogAggregator#readme",
   "devDependencies": {
     "@types/node": "^24.10.1",
+    "drizzle-kit": "^0.31.8",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.0",
+    "postgres": "^3.4.7"
   }
 }
