@@ -8,6 +8,13 @@
       "when": 1765140980983,
       "tag": "0000_perpetual_yellowjacket",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1766355673719,
+      "tag": "0001_graceful_sentinel",
+      "breakpoints": true
     }
   ]
 }
