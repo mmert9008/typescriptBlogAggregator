@@ -5,6 +5,7 @@ import {
   deleteAllUsers,
   getUsers,
 } from "./lib/db/queries/users.js";
+import { fetchFeed } from "./lib/rss.js";
 
 type CommandHandler = (cmdName: string, ...args: string[]) => Promise<void>;
 
@@ -65,6 +66,11 @@ async function handlerUsers(cmdName: string, ...args: string[]): Promise<void> {
   }
 }
 
+async function handlerAgg(cmdName: string, ...args: string[]): Promise<void> {
+  const feed = await fetchFeed("https://www.wagslane.dev/index.xml");
+  console.log(JSON.stringify(feed, null, 2));
+}
+
 function registerCommand(
   registry: CommandsRegistry,
   cmdName: string,
@@ -92,6 +98,7 @@ async function main() {
   registerCommand(registry, "register", handlerRegister);
   registerCommand(registry, "reset", handlerReset);
   registerCommand(registry, "users", handlerUsers);
+  registerCommand(registry, "agg", handlerAgg);
 
   const args = process.argv.slice(2);
 
