@@ -6,7 +6,7 @@ import {
   getUsers,
 } from "./lib/db/queries/users.js";
 import { fetchFeed } from "./lib/rss.js";
-import { createFeed } from "./lib/db/queries/feeds.js";
+import { createFeed, getAllFeeds } from "./lib/db/queries/feeds.js";
 import type { Feed, User } from "./lib/db/schema.js";
 
 type CommandHandler = (cmdName: string, ...args: string[]) => Promise<void>;
@@ -104,6 +104,17 @@ async function handlerAddFeed(
   printFeed(feed, user);
 }
 
+async function handlerFeeds(cmdName: string, ...args: string[]): Promise<void> {
+  const allFeeds = await getAllFeeds();
+
+  for (const feed of allFeeds) {
+    console.log(`Feed: ${feed.feedName}`);
+    console.log(`URL: ${feed.feedUrl}`);
+    console.log(`User: ${feed.userName}`);
+    console.log();
+  }
+}
+
 function registerCommand(
   registry: CommandsRegistry,
   cmdName: string,
@@ -133,6 +144,7 @@ async function main() {
   registerCommand(registry, "users", handlerUsers);
   registerCommand(registry, "agg", handlerAgg);
   registerCommand(registry, "addfeed", handlerAddFeed);
+  registerCommand(registry, "feeds", handlerFeeds);
 
   const args = process.argv.slice(2);
 
