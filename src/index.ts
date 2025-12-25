@@ -6,7 +6,13 @@ import {
   getUsers,
 } from "./lib/db/queries/users.js";
 import { fetchFeed } from "./lib/rss.js";
-import { createFeed, getAllFeeds } from "./lib/db/queries/feeds.js";
+import {
+  createFeed,
+  getAllFeeds,
+  getFeedByUrl,
+  createFeedFollow,
+  getFeedFollowsForUser,
+} from "./lib/db/queries/feeds.js";
 import type { Feed, User } from "./lib/db/schema.js";
 
 type CommandHandler = (cmdName: string, ...args: string[]) => Promise<void>;
@@ -102,6 +108,10 @@ async function handlerAddFeed(
 
   const feed = await createFeed(name, url, user.id);
   printFeed(feed, user);
+
+  const feedFollow = await createFeedFollow(user.id, feed.id);
+  console.log(`Following: ${feedFollow.feedName}`);
+  console.log(`User: ${feedFollow.userName}`);
 }
 
 async function handlerFeeds(cmdName: string, ...args: string[]): Promise<void> {
@@ -112,6 +122,57 @@ async function handlerFeeds(cmdName: string, ...args: string[]): Promise<void> {
     console.log(`URL: ${feed.feedUrl}`);
     console.log(`User: ${feed.userName}`);
     console.log();
+  }
+}
+
+async function handlerFollow(
+  cmdName: string,
+  ...args: string[]
+): Promise<void> {
+  if (args.length === 0) {
+    throw new Error("url is required");
+  }
+
+  const url = args[0];
+
+  const config = readConfig();
+  if (!config.currentUserName) {
+    throw new Error("no user is logged in");
+  }
+
+  const user = await getUserByName(config.currentUserName);
+  if (!user) {
+    throw new Error("current user not found");
+  }
+
+  const feed = await getFeedByUrl(url);
+  if (!feed) {
+    throw new Error("feed not found");
+  }
+
+  const feedFollow = await createFeedFollow(user.id, feed.id);
+  console.log(`Following: ${feedFollow.feedName}`);
+  console.log(`User: ${feedFollow.userName}`);
+}
+
+async function handlerFollowing(
+  cmdName: string,
+  ...args: string[]
+): Promise<void> {
+  const config = readConfig();
+  if (!config.currentUserName) {
+    throw new Error("no user is logged in");
+  }
+
+  const user = await getUserByName(config.currentUserName);
+  if (!user) {
+    throw new Error("current user not found");
+  }
+
+  const feedFollows = await getFeedFollowsForUser(user.id);
+
+  for (const feedFollow of feedFollows) {
+    console.log(`Feed: ${feedFollow.feedName}`);
   }
 }
 
@@ -145,6 +206,8 @@ async function main() {
   registerCommand(registry, "agg", handlerAgg);
   registerCommand(registry, "addfeed", handlerAddFeed);
   registerCommand(registry, "feeds", handlerFeeds);
+  registerCommand(registry, "follow", handlerFollow);
+  registerCommand(registry, "following", handlerFollowing);
 
   const args = process.argv.slice(2);
 
