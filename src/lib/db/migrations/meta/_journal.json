@@ -15,6 +15,13 @@
       "when": 1766355673719,
       "tag": "0001_graceful_sentinel",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1766644147936,
+      "tag": "0002_fantastic_tyger_tiger",
+      "breakpoints": true
     }
   ]
 }
