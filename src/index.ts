@@ -12,6 +12,7 @@ import {
   getFeedByUrl,
   createFeedFollow,
   getFeedFollowsForUser,
+  deleteFeedFollow,
 } from "./lib/db/queries/feeds.js";
 import type { Feed, User } from "./lib/db/schema.js";
 
@@ -171,6 +172,21 @@ async function handlerFollowing(
   }
 }
 
+async function handlerUnfollow(
+  cmdName: string,
+  user: User,
+  ...args: string[]
+): Promise<void> {
+  if (args.length === 0) {
+    throw new Error("url is required");
+  }
+
+  const url = args[0];
+
+  await deleteFeedFollow(user.id, url);
+  console.log(`Unfollowed feed: ${url}`);
+}
+
 function registerCommand(
   registry: CommandsRegistry,
   cmdName: string,
@@ -203,6 +219,7 @@ async function main() {
   registerCommand(registry, "feeds", handlerFeeds);
   registerCommand(registry, "follow", middlewareLoggedIn(handlerFollow));
   registerCommand(registry, "following", middlewareLoggedIn(handlerFollowing));
+  registerCommand(registry, "unfollow", middlewareLoggedIn(handlerUnfollow));
 
   const args = process.argv.slice(2);
 
