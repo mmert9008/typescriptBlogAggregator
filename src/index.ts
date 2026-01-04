@@ -13,6 +13,8 @@ import {
   createFeedFollow,
   getFeedFollowsForUser,
   deleteFeedFollow,
+  markFeedFetched,
+  getNextFeedToFetch,
 } from "./lib/db/queries/feeds.js";
 import type { Feed, User } from "./lib/db/schema.js";
 
@@ -46,6 +48,66 @@ function printFeed(feed: Feed, user: User): void {
   console.log(`Feed: ${feed.name}`);
   console.log(`URL: ${feed.url}`);
   console.log(`User: ${user.name}`);
+}
+
+function parseDuration(durationStr: string): number {
+  const regex = /^(\d+)(ms|s|m|h)$/;
+  const match = durationStr.match(regex);
+
+  if (!match) {
+    throw new Error("Invalid duration format. Use format like: 1s, 1m, 1h");
+  }
+
+  const value = parseInt(match[1]);
+  const unit = match[2];
+
+  switch (unit) {
+    case "ms":
+      return value;
+    case "s":
+      return value * 1000;
+    case "m":
+      return value * 60 * 1000;
+    case "h":
+      return value * 60 * 60 * 1000;
+    default:
+      throw new Error("Invalid duration unit");
+  }
+}
+
+function formatDuration(ms: number): string {
+  const seconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+
+  if (hours > 0) {
+    return `${hours}h${minutes % 60}m${seconds % 60}s`;
+  } else if (minutes > 0) {
+    return `${minutes}m${seconds % 60}s`;
+  } else {
+    return `${seconds}s`;
+  }
+}
+
+async function scrapeFeeds(): Promise<void> {
+  const feed = await getNextFeedToFetch();
+
+  if (!feed) {
+    console.log("No feeds to fetch");
+    return;
+  }
+
+  console.log(`Fetching feed: ${feed.name} (${feed.url})`);
+
+  await markFeedFetched(feed.id);
+
+  const rssFeed = await fetchFeed(feed.url);
+
+  for (const item of rssFeed.channel.item) {
+    console.log(`- ${item.title}`);
+  }
+
+  console.log(`Fetched ${rssFeed.channel.item.length} posts from ${feed.name}`);
 }
 
 async function handlerLogin(cmdName: string, ...args: string[]): Promise<void> {
@@ -104,8 +166,36 @@ async function handlerUsers(cmdName: string, ...args: string[]): Promise<void> {
 }
 
 async function handlerAgg(cmdName: string, ...args: string[]): Promise<void> {
-  const feed = await fetchFeed("https://www.wagslane.dev/index.xml");
-  console.log(JSON.stringify(feed, null, 2));
+  if (args.length === 0) {
+    throw new Error("time_between_reqs is required");
+  }
+
+  const durationStr = args[0];
+  const timeBetweenRequests = parseDuration(durationStr);
+
+  console.log(`Collecting feeds every ${formatDuration(timeBetweenRequests)}`);
+
+  const handleError = (error: unknown) => {
+    if (error instanceof Error) {
+      console.error(`Error scraping feeds: ${error.message}`);
+    } else {
+      console.error("Unknown error scraping feeds");
+    }
+  };
+
+  scrapeFeeds().catch(handleError);
+
+  const interval = setInterval(() => {
+    scrapeFeeds().catch(handleError);
+  }, timeBetweenRequests);
+
+  await new Promise<void>((resolve) => {
+    process.on("SIGINT", () => {
+      console.log("\nShutting down feed aggregator...");
+      clearInterval(interval);
+      resolve();
+    });
+  });
 }
 
 async function handlerAddFeed(
