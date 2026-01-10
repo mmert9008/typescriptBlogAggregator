@@ -16,6 +16,7 @@ import {
   markFeedFetched,
   getNextFeedToFetch,
 } from "./lib/db/queries/feeds.js";
+import { createPost, getPostsForUser } from "./lib/db/queries/posts.js";
 import type { Feed, User } from "./lib/db/schema.js";
 
 type CommandHandler = (cmdName: string, ...args: string[]) => Promise<void>;
@@ -103,11 +104,36 @@ async function scrapeFeeds(): Promise<void> {
 
   const rssFeed = await fetchFeed(feed.url);
 
+  let savedCount = 0;
+  let skippedCount = 0;
+
   for (const item of rssFeed.channel.item) {
-    console.log(`- ${item.title}`);
+    let publishedAt: Date | null = null;
+    if (item.pubDate) {
+      publishedAt = new Date(item.pubDate);
+      if (isNaN(publishedAt.getTime())) {
+        publishedAt = null;
+      }
+    }
+
+    const post = await createPost(
+      item.title,
+      item.link,
+      item.description || null,
+      publishedAt,
+      feed.id,
+    );
+
+    if (post) {
+      savedCount++;
+    } else {
+      skippedCount++;
+    }
   }
 
-  console.log(`Fetched ${rssFeed.channel.item.length} posts from ${feed.name}`);
+  console.log(
+    `Saved ${savedCount} new posts, skipped ${skippedCount} duplicates from ${feed.name}`,
+  );
 }
 
 async function handlerLogin(cmdName: string, ...args: string[]): Promise<void> {
@@ -277,6 +303,37 @@ async function handlerUnfollow(
   console.log(`Unfollowed feed: ${url}`);
 }
 
+async function handlerBrowse(
+  cmdName: string,
+  user: User,
+  ...args: string[]
+): Promise<void> {
+  const limit = args.length > 0 ? parseInt(args[0]) : 2;
+
+  if (isNaN(limit) || limit < 1) {
+    throw new Error("limit must be a positive number");
+  }
+
+  const posts = await getPostsForUser(user.id, limit);
+
+  if (posts.length === 0) {
+    console.log("No posts found. Follow some feeds to see posts!");
+    return;
+  }
+
+  for (const post of posts) {
+    console.log(`\nTitle: ${post.title}`);
+    console.log(`Feed: ${post.feedName}`);
+    console.log(`URL: ${post.url}`);
+    if (post.description) {
+      console.log(`Description: ${post.description}`);
+    }
+    if (post.publishedAt) {
+      console.log(`Published: ${post.publishedAt.toLocaleString()}`);
+    }
+  }
+}
+
 function registerCommand(
   registry: CommandsRegistry,
   cmdName: string,
@@ -310,6 +367,7 @@ async function main() {
   registerCommand(registry, "follow", middlewareLoggedIn(handlerFollow));
   registerCommand(registry, "following", middlewareLoggedIn(handlerFollowing));
   registerCommand(registry, "unfollow", middlewareLoggedIn(handlerUnfollow));
+  registerCommand(registry, "browse", middlewareLoggedIn(handlerBrowse));
 
   const args = process.argv.slice(2);
 
